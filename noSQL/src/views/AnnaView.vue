@@ -1,4 +1,5 @@
 <script lang="ts">
+import PouchDB from 'pouchdb'
 export default {
   data() {
     return {
@@ -14,7 +15,10 @@ export default {
       // this.total++;
     },
 
-    initDatabase() {},
+    initDatabase() {
+      const db = new PouchDB('http://localhost:5986/post')
+      console.log(db)
+    },
 
     fetchData() {}
   },
@@ -28,7 +32,7 @@ export default {
 <template>
   <h1>InfraDon2</h1>
 
-  <p>Counter: {{ datas }}</p>
+  <!-- <p>Counter: {{ datas }}</p>
 
-  <button type="button" role="button" @click="inc">+1</button>
+  <button type="button" role="button" @click="inc">+1</button> -->
 </template>
