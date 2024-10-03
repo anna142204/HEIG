@@ -1,0 +1,24 @@
+{
+  "_id": "4b1f1095d6b54f8a070d6f4ef20043a0",
+  "_rev": "5-b4495c88948ec72646caf30d43247923",
+  "post_name": "Paysage",
+  "post_content": "Mes vacances dans le sud",
+  "attributes": {
+    "creation_date": "today",
+    "author": "Main author"
+  },
+  "comments": [
+    {
+      "comment": "Comment 1",
+      "author": "Author 1"
+    },
+    {
+      "comment": "Comment 2",
+      "author": "Author 2"
+    },
+    {
+      "comment": "Comment 3",
+      "author": "Author 3"
+    }
+  ]
+}
