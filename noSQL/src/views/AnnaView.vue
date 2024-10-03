@@ -1,15 +1,34 @@
-<template>
-  <div class="about">
-    <h1>Coucou</h1>
-  </div>
-</template>
+<script lang="ts">
+export default {
+  data() {
+    return {
+      datas: [],
 
-<style>
-@media (min-width: 1024px) {
-  .about {
-    min-height: 100vh;
-    display: flex;
-    align-items: center;
+      databaseReference: null
+    }
+  },
+
+  methods: {
+    inc() {
+      // old
+      // this.total++;
+    },
+
+    initDatabase() {},
+
+    fetchData() {}
+  },
+
+  mounted() {
+    this.initDatabase()
   }
 }
-</style>
+</script>
+
+<template>
+  <h1>InfraDon2</h1>
+
+  <p>Counter: {{ datas }}</p>
+
+  <button type="button" role="button" @click="inc">+1</button>
+</template>
