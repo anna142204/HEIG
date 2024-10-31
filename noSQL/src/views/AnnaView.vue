@@ -1,16 +1,15 @@
 <script lang="ts">
 import { ref } from 'vue';
-import PouchDB from 'pouchdb'
+import PouchDB from 'pouchdb';
 
 declare interface Post {
-  _id: string,
-  doc: {
-    post_name: string,
-    post_content: string,
-    attributes: {
-      creation_date: string
-    }
-  }
+  _id: string;
+  _rev?: string;
+  post_name: string;
+  post_content: string;
+  attributes: {
+    creation_date: string;
+  };
 }
 
 export default {
@@ -30,14 +29,29 @@ export default {
 
   methods: {
 
+    addSamplePost() {
+      const examplePost: Post = {
+        _id: new Date().toISOString(),
+        post_name: 'Exemple de post',
+        post_content: 'Ceci est un contenu exemple.',
+        attributes: {
+          creation_date: new Date().toISOString(),
+        }
+      };
+      this.putDocument(examplePost);
+    },
+
     putDocument(document: Post) {
       const db = ref(this.storage).value;
       if (db) {
         db.put(document).then(() => {
           console.log('Add ok');
+          this.fetchData();
         }).catch((error) => {
           console.log('Add ko', error);
-        })
+        });
+      } else {
+        console.warn("Database not initialized");
       }
     },
 
@@ -50,7 +64,7 @@ export default {
           attachments: true
         }).then(function (result: any) {
           console.log('fetchData success', result);
-          self.postsData = result.rows;
+          self.postsData = result.rows.map((row: any) => row.doc);
         }.bind(this)).catch(function (error: any) {
           console.log('fetchData error', error);
         });
@@ -67,19 +81,19 @@ export default {
       this.storage = db;
     }
   },
-
 }
 </script>
-
 <template>
-  <h1>Nombre de post: {{ postsData.length }}</h1>
   <ul>
     <li v-for="post in postsData" :key="post._id">
-      <div class="ucfirst">{{ post.doc.post_name }}<em style="font-size: x-small;"
-          v-if="post.doc.attributes?.creation_date">
-          - {{ post.doc.attributes?.creation_date }}
+      <div class="ucfirst">
+        {{ post.post_name }}
+        <em style="font-size: x-small;" v-if="post.attributes?.creation_date">
+          - {{ post.attributes.creation_date }}
         </em>
       </div>
     </li>
   </ul>
+  <h1>Nombre de post: {{ postsData.length }}</h1>
+  <button @click="addSamplePost">Ajouter un post exemple</button>
 </template>
