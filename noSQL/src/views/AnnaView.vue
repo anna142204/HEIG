@@ -35,6 +35,19 @@ export default {
   },
 
   methods: {
+    deleteDocument(id: string, rev: string) {
+    const db = ref(this.storage).value;
+    if (db) {
+      db.remove(id, rev).then(() => {
+        console.log('Delete ok');
+        this.fetchData(); // Mettre à jour la liste des posts après la suppression
+      }).catch((error) => {
+        console.log('Delete ko', error);
+      });
+    } else {
+      console.warn("Database not initialized");
+    }
+  },
     
     selectPostForEdit(post: Post) {
       this.selectedPost = { ...post } //copie le document pour pas modifier directement
@@ -151,6 +164,7 @@ export default {
         </li>
       </ul>
       <button @click="selectPostForEdit(post)">Modifier le post</button>
+      <button @click="deleteDocument(post._id, post._rev)">Supprimer le post</button>
     </li>
   </ul>
   <div v-if="selectedPost" class="edit-form">
