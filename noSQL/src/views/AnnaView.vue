@@ -24,7 +24,8 @@ export default {
       total: 0,
       postsData: [] as Post[],
       document: null as Post | null,
-      storage: null as PouchDB.Database | null,
+      storage: null as PouchDB.Database | null, //locale
+      remoteDb: null as PouchDB.Database | null,//remote
       selectedPost: null as Post | null
     }
   },
@@ -137,13 +138,22 @@ export default {
     },
 
     initDatabase() {
-      const db = new PouchDB('http://anna:admin@localhost:5984/post')
-      if (db) {
-        console.log("Connected to collection 'post'")
+      this.storage = new PouchDB('local_posts');
+      this.remoteDb = new PouchDB('http://anna:admin@localhost:5984/post')
+      if (this.storage) {
+        console.log("Connected to local collection 'local_posts'");
+        this.storage.sync(this.remoteDb, {
+          live: true,
+          retry: true
+        }).on('change', (info) => {
+          console.log('Database changed', info);
+          this.fetchData();
+        }).on('error', (err) => {
+          console.error('Sync error', err);
+        });
       } else {
-        console.warn('Something went wrong')
+        console.warn('Something went wrong');
       }
-      this.storage = db
     }
   }
 }
