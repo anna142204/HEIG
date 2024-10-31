@@ -1,90 +1,85 @@
 <script lang="ts">
+import { ref } from 'vue';
 import PouchDB from 'pouchdb'
+
+declare interface Post {
+  _id: string,
+  doc: {
+    post_name: string,
+    post_content: string,
+    attributes: {
+      creation_date: string
+    }
+  }
+}
+
 export default {
   data() {
     return {
-      datas: [] as any,
-      database: null as PouchDB.Database | null,
-      databaseReference: null
-    }
-  },
-
-  methods: {
-    inc() {
-      // old
-      // this.total++;
-    },
-
-    initDatabase() {
-      const db = new PouchDB('http://anna:admin@localhost:5984/post')
-      if (db) {
-        console.log("Connected to collection 'post'")
-      } else {
-        console.warn('Something went wrong')
-      }
-      this.database = db
-    },
-
-    fetchData() {
-      if (!this.database) {
-        console.error('Database not initialized')
-        return
-      }
-      try {
-        const result = this.database.allDocs({ include_docs: true })
-
-        this.database
-          .allDocs({
-            include_docs: true
-          })
-          .then((result) => {
-            console.log('hello', result)
-            this.datas = result.rows.map((row) => row.doc) // Stocker les documents dans datas
-
-            console.log('Données stockées dans datas :', this.datas)
-            console.table(this.datas)
-            // handle result
-          })
-          .catch(function (err) {
-            console.log(err)
-          })
-
-        // this.datas = result.rows.map((row) => row.doc)
-        console.log('Données récupérées :', result)
-      } catch (error) {
-        console.error('Erreur lors de la récupération des données:', error)
-      }
-    }
+      total: 0,
+      postsData: [] as Post[],
+      document: null as Post | null,
+      storage: null as PouchDB.Database | null,
+    };
   },
 
   mounted() {
-    this.initDatabase()
-    this.fetchData()
-  }
+    this.initDatabase();
+    this.fetchData();
+  },
+
+  methods: {
+
+    putDocument(document: Post) {
+      const db = ref(this.storage).value;
+      if (db) {
+        db.put(document).then(() => {
+          console.log('Add ok');
+        }).catch((error) => {
+          console.log('Add ko', error);
+        })
+      }
+    },
+
+    fetchData() {
+      const storage = ref(this.storage);
+      const self = this;
+      if (storage.value) {
+        (storage.value).allDocs({
+          include_docs: true,
+          attachments: true
+        }).then(function (result: any) {
+          console.log('fetchData success', result);
+          self.postsData = result.rows;
+        }.bind(this)).catch(function (error: any) {
+          console.log('fetchData error', error);
+        });
+      }
+    },
+
+    initDatabase() {
+      const db = new PouchDB('http://anna:admin@localhost:5984/post');
+      if (db) {
+        console.log("Connected to collection 'post'");
+      } else {
+        console.warn("Something went wrong");
+      }
+      this.storage = db;
+    }
+  },
+
 }
 </script>
 
 <template>
-  <h1>InfraDon2</h1>
-
-  <!-- Affichage des données récupérées -->
-  <ul v-if="datas.length">
-    <li v-for="(data, index) in datas" :key="index">
-      <p><strong>Nom du post :</strong> {{ data.post_name }}</p>
-      <p><strong>Contenu du post :</strong> {{ data.post_content }}</p>
-
-      <!-- Affichage des attributs -->
-      <p><strong>Date de création :</strong> {{ data.attributes.creation_date }}</p>
-      <p><strong>Auteur :</strong> {{ data.attributes.author }}</p>
-
-      <!-- Affichage des commentaires -->
-      <ul>
-        <li v-for="(comment, index) in data.comments" :key="index">
-          <p><strong>Commentaire :</strong> {{ comment.comment }}</p>
-          <p><strong>Auteur du commentaire :</strong> {{ comment.author }}</p>
-        </li>
-      </ul>
+  <h1>Nombre de post: {{ postsData.length }}</h1>
+  <ul>
+    <li v-for="post in postsData" :key="post._id">
+      <div class="ucfirst">{{ post.doc.post_name }}<em style="font-size: x-small;"
+          v-if="post.doc.attributes?.creation_date">
+          - {{ post.doc.attributes?.creation_date }}
+        </em>
+      </div>
     </li>
   </ul>
-  <p v-else>Aucune donnée trouvée.</p>
 </template>
