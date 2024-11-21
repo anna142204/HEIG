@@ -119,9 +119,13 @@ export default {
       }
     },
 
-    updateDistantDatabase() {},
+    updateDistantDatabase() {
+      
+     },
 
-    watchRemoteDatabase() {}
+    watchRemoteDatabase() {
+      
+    }
   }
 }
 </script>
@@ -154,7 +158,6 @@ export default {
     </ul>
 
     <!-- Section pour ajouter un post fictif -->
-    <h2>Ajouter un post exemple</h2>
     <button @click="putDocument" class="add-post-btn">Ajouter un post exemple</button>
     <div>
       <button @click="updateLocalDatabase" class="sync-btn">Mettre à jour la base locale</button>
