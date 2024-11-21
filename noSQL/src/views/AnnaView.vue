@@ -3,9 +3,8 @@ import { ref } from 'vue'
 import PouchDB from 'pouchdb'
 
 declare interface Post {
-  //je garde la structure des premier documents faits
   _id: string
-  _rev?: string
+  _rev: string
   post_name: string
   post_content: string
   attributes: {
@@ -21,12 +20,9 @@ declare interface Post {
 export default {
   data() {
     return {
-      total: 0,
+      remoteDB: 'http://anna:admin@localhost:5984/post',
       postsData: [] as Post[],
-      document: null as Post | null,
-      storage: null as PouchDB.Database | null, //locale
-      remoteDb: null as PouchDB.Database | null,//remote
-      selectedPost: null as Post | null
+      db: null as PouchDB.Database | null
     }
   },
 
@@ -36,74 +32,39 @@ export default {
   },
 
   methods: {
-    deleteDocument(id: string, rev: string) {
-    const db = ref(this.storage).value;
-    if (db) {
-      db.remove(id, rev).then(() => {
-        console.log('Delete ok');
-        this.fetchData(); // Mettre à jour la liste des posts après la suppression
-      }).catch((error) => {
-        console.log('Delete ko', error);
-      });
-    } else {
-      console.warn("Database not initialized");
-    }
-  },
-    
-    selectPostForEdit(post: Post) {
-      this.selectedPost = { ...post } //copie le document pour pas modifier directement
-    },
-
-    submitEdit() {
-      if (this.selectedPost) {
-        this.updateDocument(this.selectedPost)  //modifie le document
-        this.selectedPost = null 
+    async deleteData(id: string, rev: string) {
+      console.log('Call deleteData', rev)
+      const db = ref(this.db).value
+      if (!db) {
+        console.log('Database not valid')
+        return
+      }
+      try {
+        await db.remove(id, rev)
+        console.log('deleteData success')
+        this.fetchData()
+      } catch (error) {
+        console.log('deleteData error', error)
       }
     },
 
-    cancelEdit() {
-      this.selectedPost = null 
-    },
-  
-    updateDocument(document: Post) {
-      const db = ref(this.storage).value
-      if (db) {
-        db.put(document)
-          .then(() => {
-            console.log('Update ok')
-            this.fetchData()
-          })
-          .catch((error) => {
-            console.log('Update ko', error)
-          })
-      } else {
-        console.warn('Database not initialized')
-      }
-    },
-
-    addSamplePost() {
-      // ajouter un post fictif
-      const examplePost: Post = {
+    getFakePost() {
+      return {
         _id: new Date().toISOString(),
-        post_name: 'Exemple de post',
-        post_content: 'Ceci est un contenu exemple.',
+        post_name: 'post_name' + new Date().toISOString(),
+        post_content: 'post_content',
         attributes: {
-          creation_date: new Date().toISOString(),
-          author: 'Main author'
-        },
-        comments: [
-          { comment: 'Comment 1', author: 'Author 1' },
-          { comment: 'Comment 2', author: 'Author 2' },
-          { comment: 'Comment 3', author: 'Author 3' }
-        ]
+          creation_date: new Date().toISOString()
+        }
       }
-      this.putDocument(examplePost)
     },
 
-    putDocument(document: Post) {
-      const db = ref(this.storage).value
+    putDocument() {
+      const document = this.getFakePost()
+      const db = ref(this.db).value
       if (db) {
-        db.put(document)
+        db.put
+          .bind(this)(document)
           .then(() => {
             console.log('Add ok')
             this.fetchData()
@@ -111,26 +72,21 @@ export default {
           .catch((error) => {
             console.log('Add ko', error)
           })
-      } else {
-        console.warn('Database not initialized')
       }
     },
 
     fetchData() {
-      const storage = ref(this.storage)
-      const self = this
-      if (storage.value) {
-        storage.value
-          .allDocs({
+      const db = ref(this.db).value
+      if (db) {
+        db.allDocs
+          .bind(this)({
             include_docs: true,
             attachments: true
           })
-          .then(
-            function (result: any) {
-              console.log('fetchData success', result)
-              self.postsData = result.rows.map((row: any) => row.doc)
-            }.bind(this)
-          )
+          .then((result: any) => {
+            console.log('fetchData success =>', result.rows)
+            this.postsData = result.rows.map((row: any) => row.doc)
+          })
           .catch(function (error: any) {
             console.log('fetchData error', error)
           })
@@ -138,69 +94,76 @@ export default {
     },
 
     initDatabase() {
-      this.storage = new PouchDB('local_posts');
-      this.remoteDb = new PouchDB('http://anna:admin@localhost:5984/post')
-      if (this.storage) {
-        console.log("Connected to local collection 'local_posts'");
-        this.storage.sync(this.remoteDb, {
-          live: true,
-          retry: true
-        }).on('change', (info) => {
-          console.log('Database changed', info);
-          this.fetchData();
-        }).on('error', (err) => {
-          console.error('Sync error', err);
-        });
+      const localDB = 'post'
+      const $db = new PouchDB(localDB)
+      if ($db) {
+        console.log('Connected to collection: ' + $db.name)
       } else {
-        console.warn('Something went wrong');
+        console.warn('Something went wrong')
       }
-    }
+      this.db = $db
+    },
+
+    updateLocalDatabase() {
+      const db = ref(this.db).value
+      if (db) {
+        db.replicate.from
+          .bind(this)(this.remoteDB)
+          .on('complete', () => {
+            console.log('on replicate complete')
+            this.fetchData()
+          })
+          .on('error', function (error) {
+            console.log('error', error)
+          })
+      }
+    },
+
+    updateDistantDatabase() {},
+
+    watchRemoteDatabase() {}
   }
 }
 </script>
 
 <template>
-  <ul>
-    <li v-for="post in postsData" :key="post._id">
-      <div class="ucfirst">
-        {{ post.post_name }}
-        <em style="font-size: x-small" v-if="post.attributes?.creation_date">
-          - {{ post.attributes.creation_date }}
-        </em>
-      </div>
-      <ul v-if="post.comments && post.comments.length">
-        <li v-for="(comment, index) in post.comments" :key="index">
-          <strong>{{ comment.author }}:</strong> {{ comment.comment }}
-        </li>
-      </ul>
-      <button @click="selectPostForEdit(post)">Modifier le post</button>
-      <button @click="deleteDocument(post._id, post._rev)">Supprimer le post</button>
-    </li>
-  </ul>
-  <div v-if="selectedPost" class="edit-form">
-    <h2>Modifier le post</h2>
-    <form @submit.prevent="submitEdit">
-      <label>
-        Nom du post:
-        <input v-model="selectedPost.post_name" />
-      </label>
-      <label>
-        Contenu du post:
-        <textarea v-model="selectedPost.post_content"></textarea>
-      </label>
-      <label>
-        Date de création:
-        <input type="text" v-model="selectedPost.attributes.creation_date" />
-      </label>
-      <label>
-        Auteur:
-        <input type="text" v-model="selectedPost.attributes.author" />
-      </label>
-      <button type="submit">Enregistrer les modifications</button>
-      <button type="button" @click="cancelEdit">Annuler</button>
-    </form>
-  </div>
+  <div>
+    <!-- Liste des posts -->
+    <h1>Liste des posts</h1>
+    <ul>
+      <li v-for="post in postsData" :key="post._id" class="post-item">
+        <div class="post-title">
+          <strong>{{ post.post_name }}</strong>
+          <em class="creation-date" v-if="post.attributes?.creation_date">
+            - {{ post.attributes.creation_date }}
+          </em>
+        </div>
 
-  <h1>Nombre de post: {{ postsData.length }}</h1>
-  <button @click="addSamplePost">Ajouter un post exemple</button>
+        <p>{{ post.post_content }}</p>
+
+        <!-- Liste des commentaires -->
+        <ul class="comments" v-if="post.comments && post.comments.length">
+          <li v-for="(comment, index) in post.comments" :key="index">
+            <strong>{{ comment.author }}:</strong> {{ comment.comment }}
+          </li>
+        </ul>
+
+        <!-- Actions -->
+        <button @click="deleteData(post._id, post._rev)" class="delete-btn">Supprimer</button>
+      </li>
+    </ul>
+
+    <!-- Section pour ajouter un post fictif -->
+    <h2>Ajouter un post exemple</h2>
+    <button @click="putDocument" class="add-post-btn">Ajouter un post exemple</button>
+    <div>
+      <button @click="updateLocalDatabase" class="sync-btn">Mettre à jour la base locale</button>
+      <button @click="updateDistantDatabase" class="sync-btn">
+        Mettre à jour la base distante
+      </button>
+      <button @click="watchRemoteDatabase" class="watch-btn">Surveiller la base distante</button>
+    </div>
+
+    <h1>Nombre de posts: {{ postsData.length }}</h1>
+  </div>
 </template>
