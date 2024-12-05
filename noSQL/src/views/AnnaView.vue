@@ -120,11 +120,18 @@ export default {
     },
 
     updateDistantDatabase() {
-      
-     },
+      console.log('updateDistantDatabase called')
+      const db = ref(this.db).value
+      if (db) {
+        db.replicate
+          .to(this.remoteDB)
+          .on('complete', () => console.log('Replication completed'))
+          .on('error', (err: any) => console.error('Replication error', err))
+      }
+    },
 
     watchRemoteDatabase() {
-      
+     
     }
   }
 }
