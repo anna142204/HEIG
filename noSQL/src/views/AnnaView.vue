@@ -131,7 +131,13 @@ export default {
     },
 
     watchRemoteDatabase() {
-     
+      console.log('watchRemoteDatabase called');
+      const db = ref(this.db).value;
+      if (db) {
+        db.sync(this.remoteDB, { live: true, retry: true })
+          .on('change', (info: any) => console.log('Change detected', info))
+          .on('error', (err: any) => console.error('Sync error', err));
+      }
     }
   }
 }
